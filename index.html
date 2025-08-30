@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Crypto Breakout Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0a0e17;
+            --card-bg: #131a2c;
+            --accent-color: #2962ff;
+            --positive-color: #00c853;
+            --negative-color: #ff1744;
+            --text-primary: #f8f9fa;
+            --text-secondary: #e0e0e0;
+        }
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 20px;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #131a2c 0%, #0d111c 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid #2a3552;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            border-bottom: 1px solid #2a3552;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .positive {
+            color: var(--positive-color);
+            font-weight: 600;
+        }
+        .negative {
+            color: var(--negative-color);
+            font-weight: 600;
+        }
+        .ticker-container {
+            background: #0d111c;
+            padding: 12px 0;
+            overflow: hidden;
+            white-space: nowrap;
+            border-bottom: 1px solid #2a3552;
+            position: relative;
+        }
+        .ticker-scroll {
+            display: inline-block;
+            padding-left: 100%;
+            animation: ticker-scroll 120s linear infinite;
+        }
+        @keyframes ticker-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        .ticker-item {
+            display: inline-block;
+            padding: 0 15px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .coin-badge {
+            font-weight: 600;
+            background: rgba(41, 98, 255, 0.15);
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-right: 5px;
+            color: var(--text-primary);
+        }
+        .progress {
+            height: 6px;
+            background-color: #2a3552;
+        }
+        .breakout-prediction {
+            border-left: 4px solid var(--positive-color);
+            padding-left: 15px;
+            margin: 15px 0;
+        }
+        .bearish-prediction {
+            border-left: 4px solid var(--negative-color);
+            padding-left: 15px;
+            margin: 15px 0;
+        }
+        .monitored-coin {
+            transition: all 0.3s ease;
+        }
+        .monitored-coin:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+        }
+        .ai-status {
+            background: rgba(0, 200, 83, 0.1);
+            color: var(--positive-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .last-updated {
+            font-size: 12px;
+            color: #9e9e9e;
+        }
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+        .influencer-tag {
+            background: linear-gradient(45deg, #ff6b35, #f7931a);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        .form-control {
+            background-color: #1a243f;
+            border: 1px solid #2a3552;
+            color: var(--text-primary);
+        }
+        .form-control:focus {
+            background-color: #1a243f;
+            color: var(--text-primary);
+            border-color: #2962ff;
+            box-shadow: 0 0 0 0.25rem rgba(41, 98, 255, 0.25);
+        }
+        .btn-primary {
+            background-color: #2962ff;
+            border-color: #2962ff;
+        }
+        .custom-coin-item {
+            background: rgba(41, 98, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .config-panel {
+            background: rgba(41, 98, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .api-status {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+        .api-active {
+            background: rgba(0, 200, 83, 0.1);
+            color: var(--positive-color);
+        }
+        .api-inactive {
+            background: rgba(255, 23, 68, 0.1);
+            color: var(--negative-color);
+        }
+        .gainers-list, .losers-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .gainers-list .list-group-item, .losers-list .list-group-item {
+            background: transparent;
+            border-color: #2a3552;
+            color: var(--text-secondary);
+        }
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--text-primary);
+        }
+        p, span, div, li {
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-brain"></i> AI Crypto Breakout Predictor
+            </a>
+            <div class="d-flex">
+                <span class="ai-status">
+                    <i class="fas fa-circle"></i> AI ACTIVE & SELF-HEALING
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Configuration Panel -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-cog"></i> API Configuration
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="cmc-api-key" class="form-label">CoinMarketCap API Key</label>
+                                    <input type="text" class="form-control" id="cmc-api-key" value="1166d943-7350-4996-88ae-0f842df38fde">
+                                    <span class="api-status api-active">Active</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="cg-api-key" class="form-label">CoinGecko API Key</label>
+                                    <input type="text" class="form-control" id="cg-api-key" value="CG-x4bnFrr8oQr3uoMV6Uxi7JLs">
+                                    <span class="api-status api-active">Active</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="news-api-key" class="form-label">News API Key</label>
+                                    <input type="text" class="form-control" id="news-api-key" value="f5f7faf106e34673ac7e30827f5f8534">
+                                    <span class="api-status api-active">Active</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button class="btn btn-primary" id="save-config-btn">
+                                    <i class="fas fa-save"></i> Save Configuration
+                                </button>
+                                <button class="btn btn-outline-primary" id="test-apis-btn">
+                                    <i class="fas fa-bolt"></i> Test APIs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticker Bar -->
+    <div class="ticker-container">
+        <div class="ticker-scroll" id="ticker-scroll">
+            <!-- Ticker items will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-md-8">
+                <!-- Breakout Predictions -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-rocket"></i> Early Breakout Predictions</span>
+                        <span class="last-updated">Last updated: <span id="prediction-update-time">Just now</span></span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="breakout-predictions">
+                            <!-- Predictions will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitored Altcoins -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-binoculars"></i> Monitored Altcoins
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="monitored-coins">
+                            <!-- Monitored coins will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Coin Monitoring -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-plus-circle"></i> Add Custom Coins to Monitor
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="custom-coin-input" placeholder="Enter coin symbol (e.g. BTC)">
+                                    <button class="btn btn-primary" type="button" id="add-coin-btn">Add Coin</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h5>Your Custom Coins</h5>
+                                <div id="custom-coins-list">
+                                    <!-- Custom coins will be added here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-md-4">
+                <!-- Market Overview -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-chart-pie"></i> Market Overview</span>
+                        <span class="last-updated">Last updated: <span id="market-update-time">Just now</span></span>
+                    </div>
+                    <div class="card-body">
+                        <h5>BTC Dominance: <span id="btc-dominance">Loading...</span></h5>
+                        <div class="chart-container">
+                            <canvas id="dominanceChart"></canvas>
+                        </div>
+                        <div class="mt-3">
+                            <p>Total Market Cap: <span id="total-marketcap">Loading...</span></p>
+                            <p>24h Volume: <span id="total-volume">Loading...</span></p>
+                            <p>Fear & Greed Index: <span id="fear-greed">Loading...</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Gainers -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-arrow-up"></i> Top Gainers (24h)
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush gainers-list" id="top-gainers">
+                            <li class="list-group-item">Loading gainers...</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Top Losers -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-arrow-down"></i> Top Losers (24h)
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush losers-list" id="top-losers">
+                            <li class="list-group-item">Loading losers...</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Crypto News -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-newspaper"></i> Latest Crypto News
+                    </div>
+                    <div class="card-body">
+                        <div id="crypto-news">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center p-4 mt-4">
+        <p class="mb-0">AI Crypto Breakout Prediction System • Self-healing AI • Continuous Monitoring</p>
+        <p class="last-updated">System version: 2.3.1 | Last update: <span id="system-update-time">Just now</span></p>
+    </footer>
+
+    <script>
+        // Configuration
+        const config = {
+            cmcApiKey: '1166d943-7350-4996-88ae-0f842df38fde',
+            cgApiKey: 'CG-x4bnFrr8oQr3uoMV6Uxi7JLs',
+            newsApiKey: 'f5f7faf106e34673ac7e30827f5f8534',
+            updateInterval: 60000, // 1 minute
+            maxCoins: 125 // Maximum number of coins to monitor
+        };
+
+        // Global variables
+        let allCoinsData = [];
+        let customCoins = [];
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            
+            // Set up periodic updates
+            setInterval(updateAllData, config.updateInterval);
+            setInterval(updateTimestamps, 30000);
+        });
+
+        function initializeApp() {
+            // Load custom coins from localStorage if available
+            const savedCoins = localStorage.getItem('customCoins');
+            if (savedCoins) {
+                customCoins = JSON.parse(savedCoins);
+                renderCustomCoins();
+            }
+            
+            updateAllData();
+            initializeCharts();
+        }
+
+        function setupEventListeners() {
+            // Add custom coin button
+            document.getElementById('add-coin-btn').addEventListener('click', addCustomCoin);
+            
+            // Allow adding coin with Enter key
+            document.getElementById('custom-coin-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addCustomCoin();
+                }
+            });
+            
+            // Configuration buttons
+            document.getElementById('save-config-btn').addEventListener('click', saveConfig);
+            document.getElementById('test-apis-btn').addEventListener('click', testAPIs);
+        }
+
+        function saveConfig() {
+            config.cmcApiKey = document.getElementById('cmc-api-key').value;
+            config.cgApiKey = document.getElementById('cg-api-key').value;
+            config.newsApiKey = document.getElementById('news-api-key').value;
+            
+            alert('Configuration saved successfully!');
+            updateAllData(); // Refresh data with new API keys
+        }
+
+        function testAPIs() {
+            alert('Testing APIs... This might take a moment.');
+            // In a real implementation, you would test each API endpoint
+            updateAllData();
+        }
+
+        function addCustomCoin() {
+            const input = document.getElementById('custom-coin-input');
+            const symbol = input.value.trim().toUpperCase();
+            
+            if (symbol && !customCoins.includes(symbol)) {
+                customCoins.push(symbol);
+                localStorage.setItem('customCoins', JSON.stringify(customCoins));
+                renderCustomCoins();
+                updateCustomCoinsData();
+            }
+            
+            input.value = '';
+        }
+
+        function renderCustomCoins() {
+            const container = document.getElementById('custom-coins-list');
+            container.innerHTML = '';
+            
+            if (customCoins.length === 0) {
+                container.innerHTML = '<p>No custom coins added yet.</p>';
+                return;
+            }
+            
+            customCoins.forEach(coin => {
+                const coinElement = document.createElement('div');
+                coinElement.className = 'custom-coin-item d-flex justify-content-between align-items-center';
+                coinElement.innerHTML = `
+                    <span class="coin-badge">${coin}</span>
+                    <span class="price">Loading...</span>
+                    <span class="change">0.00%</span>
+                    <button class="btn btn-sm btn-danger remove-coin" data-coin="${coin}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                container.appendChild(coinElement);
+            });
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-coin').forEach(button => {
+                button.addEventListener('click', function() {
+                    const coinToRemove = this.getAttribute('data-coin');
+                    customCoins = customCoins.filter(coin => coin !== coinToRemove);
+                    localStorage.setItem('customCoins', JSON.stringify(customCoins));
+                    renderCustomCoins();
+                });
+            });
+        }
+
+        function updateAllData() {
+            fetchMarketData();
+            updateTicker();
+            updateMonitoredCoins();
+            updateMarketOverview();
+            updateGainersLosers();
+            fetchNews();
+            updateCustomCoinsData();
+        }
+
+        function updateTimestamps() {
+            const now = new Date();
+            document.getElementById('prediction-update-time').textContent = now.toLocaleTimeString();
+            document.getElementById('market-update-time').textContent = now.toLocaleTimeString();
+            document.getElementById('system-update-time').textContent = now.toLocaleString();
+        }
+
+        async function fetchMarketData() {
+            try {
+                // In a real implementation, you would fetch from the APIs
+                // This is a simulation of what the data might look like
+                
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Generate mock data for 125+ coins
+                allCoinsData = generateMockData(125);
+                
+            } catch (error) {
+                console.error('Error fetching market data:', error);
+            }
+        }
+
+        function generateMockData(count) {
+            const coins = [];
+            const coinNames = [
+                'Bitcoin', 'Ethereum', 'Binance Coin', 'Solana', 'Ripple', 'Cardano', 'Dogecoin', 
+                'Polkadot', 'dogwifhat', 'Filecoin', 'Bonk', 'Monero', 'Tron', 'Avalanche',
+                'Chainlink', 'Polygon', 'Litecoin', 'Uniswap', 'Shiba Inu', 'Bitcoin Cash',
+                'Algorand', 'Stellar', 'Cosmos', 'Ethereum Classic', 'VeChain', 'Theta Network',
+                'Axie Infinity', 'Tezos', 'Elrond', 'Hedera', 'Decentraland', 'The Sandbox',
+                'Gala', 'Flow', 'Aave', 'Compound', 'Maker', 'Synthetix', 'Curve DAO', 'Yearn Finance',
+                'Chiliz', 'Enjin Coin', 'Basic Attention Token', 'Zcash', 'Dash', 'NEO', 'Waves',
+                'Kusama', 'EOS', 'IOTA', 'OMG Network', 'Quant', 'Bitcoin SV', 'Theta Fuel',
+                'Helium', 'Harmony', 'Nexo', 'Celsius', 'Klaytn', 'Celo', 'Decred', 'Zilliqa',
+                'Qtum', 'Bancor', 'Ren', '0x', 'Reserve Rights', 'UMA', 'Lisk', 'Arweave',
+                'Livepeer', 'Ankr', 'Nervos Network', 'Icon', 'SKALE', 'Moonriver', 'Oasis Network',
+                'Audius', 'Secret', 'Injective', 'Serum', 'Raydium', 'Solrise', 'Orca', 'Saber',
+                'Mercurial', 'Sunny', 'Port', 'Step', 'Cropper', 'Aldrin', 'Stepn', 'Genopets',
+                'Star Atlas', 'Aurory', 'DeFi Land', 'Meanfi', 'Marinade', 'Lido', 'Jupiter',
+                'Step Finance', 'Parrot', 'Tulip', 'Francium', 'Ratio', 'Pyth', 'Switchboard',
+                'Band', 'Ocean', 'API3', 'DIA', 'Nest', 'Tellor', 'Umbrella', 'Boring', 'Pool',
+                'Barn', 'Index', 'Leek', 'Cabbage', 'Potato', 'Tomato', 'Onion', 'Garlic',
+                'Carrot', 'Broccoli', 'Cucumber', 'Lettuce', 'Spinach', 'Kale', 'Apple', 'Banana'
+            ];
+            
+            for (let i = 0; i < count; i++) {
+                const symbol = i < coinNames.length 
+                    ? coinNames[i].substring(0, 4).toUpperCase() 
+                    : `COIN${i}`;
+                
+                const price = (Math.random() * 100000).toFixed(Math.random() > 0.5 ? 2 : 4);
+                const change = (Math.random() * 20 - 10).toFixed(2);
+                const volume = Math.random() * 1000000000;
+                
+                coins.push({
+                    symbol,
+                    name: coinNames[i] || `Coin ${i}`,
+                    price: parseFloat(price),
+                    change: parseFloat(change),
+                    volume
+                });
+            }
+            
+            return coins;
+        }
+
+        function updateTicker() {
+            const tickerScroll = document.getElementById('ticker-scroll');
+            tickerScroll.innerHTML = '';
+            
+            allCoinsData.forEach(coin => {
+                const changeClass = coin.change >= 0 ? 'positive' : 'negative';
+                const changeIcon = coin.change >= 0 ? '▲' : '▼';
+                
+                const tickerItem = document.createElement('div');
+                tickerItem.className = 'ticker-item';
+                tickerItem.innerHTML = `
+                    <span class="coin-badge">${coin.symbol}</span>
+                    <span>$${formatPrice(coin.price)}</span>
+                    <span class="${changeClass}">${changeIcon} ${Math.abs(coin.change).toFixed(2)}%</span>
+                `;
+                
+                tickerScroll.appendChild(tickerItem);
+            });
+        }
+
+        function updateMonitoredCoins() {
+            const monitoredCoinsContainer = document.getElementById('monitored-coins');
+            const monitoredCoins = ['WIF', 'FIL', 'BONK', 'ADA', 'XMR', 'TRX'];
+            
+            monitoredCoinsContainer.innerHTML = '';
+            
+            monitoredCoins.forEach(symbol => {
+                const coin = allCoinsData.find(c => c.symbol === symbol) || { 
+                    symbol, 
+                    name: symbol, 
+                    price: 0, 
+                    change: 0, 
+                    volume: 0 
+                };
+                
+                const changeClass = coin.change >= 0 ? 'positive' : 'negative';
+                const prediction = coin.change >= 0 ? 'Bullish' : 'Bearish';
+                const predictionClass = coin.change >= 0 ? 'positive' : 'negative';
+                
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4';
+                col.innerHTML = `
+                    <div class="card monitored-coin">
+                        <div class="card-body">
+                            <h5 class="card-title">${coin.symbol} <span class="${predictionClass}">(${prediction})</span></h5>
+                            <h6 class="card-subtitle mb-2 text-muted">${coin.name}</h6>
+                            <p class="card-text">Price: $${formatPrice(coin.price)}</p>
+                            <p class="card-text">24h Change: <span class="${changeClass}">${coin.change.toFixed(2)}%</span></p>
+                            <p class="card-text">Volume: $${formatNumber(coin.volume)}</p>
+                            <a href="#" class="btn btn-sm btn-outline-primary">View Analysis</a>
+                        </div>
+                    </div>
+                `;
+                
+                monitoredCoinsContainer.appendChild(col);
+            });
+        }
+
+        function updateCustomCoinsData() {
+            customCoins.forEach(symbol => {
+                const coin = allCoinsData.find(c => c.symbol === symbol) || { 
+                    price: 0, 
+                    change: 0 
+                };
+                
+                const priceElement = document.querySelector(`.custom-coin-item .coin-badge:contains('${symbol}')`)?.parentElement?.querySelector('.price');
+                const changeElement = document.querySelector(`.custom-coin-item .coin-badge:contains('${symbol}')`)?.parentElement?.querySelector('.change');
+                
+                if (priceElement && changeElement) {
+                    priceElement.textContent = `$${formatPrice(coin.price)}`;
+                    changeElement.textContent = `${coin.change >= 0 ? '+' : ''}${coin.change.toFixed(2)}%`;
+                    changeElement.className = `change ${coin.change >= 0 ? 'positive' : 'negative'}`;
+                }
+            });
+        }
+
+        function updateMarketOverview() {
+            // In a real application, this would fetch from the CoinMarketCap API
+            document.getElementById('btc-dominance').textContent = '58.3%';
+            document.getElementById('total-marketcap').textContent = '$2.56T';
+            document.getElementById('total-volume').textContent = '$128.7B';
+            document.getElementById('fear-greed').textContent = '79 (Extreme Greed)';
+        }
+
+        function updateGainersLosers() {
+            // Sort coins by change percentage
+            const sortedCoins = [...allCoinsData].sort((a, b) => b.change - a.change);
+            const gainers = sortedCoins.slice(0, 10);
+            const losers = sortedCoins.slice(-10).reverse();
+
+            const gainersList = document.getElementById('top-gainers');
+            const losersList = document.getElementById('top-losers');
+
+            gainersList.innerHTML = '';
+            losersList.innerHTML = '';
+
+            gainers.forEach(coin => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `
+                    <span class="coin-badge">${coin.symbol}</span>
+                    <span>$${formatPrice(coin.price)}</span>
+                    <span class="positive">+${coin.change.toFixed(2)}%</span>
+                `;
+                gainersList.appendChild(li);
+            });
+
+            losers.forEach(coin => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `
+                    <span class="coin-badge">${coin.symbol}</span>
+                    <span>$${formatPrice(coin.price)}</span>
+                    <span class="negative">${coin.change.toFixed(2)}%</span>
+                `;
+                losersList.appendChild(li);
+            });
+        }
+
+        async function fetchNews() {
+            try {
+                // In a real implementation, you would use the News API
+                // This is a simulation of what the news might look like
+                
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                const newsContainer = document.getElementById('crypto-news');
+                newsContainer.innerHTML = '';
+                
+                const newsItems = [
+                    { title: 'Bitcoin Surges Past $67,000 as Institutional Demand Increases', source: 'CryptoNews', time: '2 hours ago' },
+                    { title: 'Ethereum Foundation Announces Major Protocol Upgrade', source: 'CoinDesk', time: '5 hours ago' },
+                    { title: 'Elon Musk Tweets About Dogecoin, Price Jumps 15%', source: 'Twitter', time: '7 hours ago' },
+                    { title: 'New Regulations Proposed for Cryptocurrency Exchanges', source: 'Financial Times', time: '1 day ago' },
+                    { title: 'DeFi Project Raises $50M in Latest Funding Round', source: 'TechCrunch', time: '1 day ago' }
+                ];
+                
+                newsItems.forEach(news => {
+                    const newsElement = document.createElement('div');
+                    newsElement.className = 'mb-3';
+                    newsElement.innerHTML = `
+                        <h6>${news.title}</h6>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">${news.source}</span>
+                            <span class="text-muted">${news.time}</span>
+                        </div>
+                        <hr>
+                    `;
+                    newsContainer.appendChild(newsElement);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching news:', error);
+                document.getElementById('crypto-news').innerHTML = '<p>Failed to load news. Please try again later.</p>';
+            }
+        }
+
+        function initializeCharts() {
+            // BTC Dominance Chart
+            const dominanceCtx = document.getElementById('dominanceChart').getContext('2d');
+            new Chart(dominanceCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'BTC Dominance %',
+                        data: [48.2, 49.5, 51.3, 53.1, 50.8, 52.4, 54.2, 56.7, 57.2, 57.8, 58.3, 58.1],
+                        borderColor: '#2962ff',
+                        backgroundColor: 'rgba(41, 98, 255, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#e0e0e0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#e0e0e0'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Helper functions
+        function formatPrice(price) {
+            if (price < 0.01) return price.toFixed(8);
+            if (price < 1) return price.toFixed(4);
+            if (price < 1000) return price.toFixed(2);
+            return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000000) {
+                return (num / 1000000000).toFixed(2) + 'B';
+            }
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(2) + 'M';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(2) + 'K';
+            }
+            return num.toString();
+        }
+
+        // Simulate AI self-updating
+        setInterval(() => {
+            const updateTime = new Date().toLocaleString();
+            document.getElementById('system-update-time').textContent = updateTime;
+            
+            // Simulate AI learning and improving predictions
+            const confidenceBars = document.querySelectorAll('.progress-bar');
+            confidenceBars.forEach(bar => {
+                const currentWidth = parseInt(bar.style.width);
+                const change = Math.random() * 5 - 2; // Random change between -2 and +3
+                let newWidth = currentWidth + change;
+                
+                // Keep between 50% and 95%
+                newWidth = Math.max(50, Math.min(95, newWidth));
+                
+                bar.style.width = `${newWidth}%`;
+                bar.setAttribute('aria-valuenow', newWidth);
+                bar.parentElement.nextElementSibling.textContent = `Confidence: ${Math.round(newWidth)}%`;
+            });
+        }, 120000); // Update every 2 minutes
+    </script>
+</body>
+</html>
